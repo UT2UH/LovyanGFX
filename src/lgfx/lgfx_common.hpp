@@ -45,6 +45,7 @@ namespace lgfx
     , board_ESP_WROVER_KIT
     , board_LoLinD32
     , board_WioTerminal
+    , board_SRS
     };
   }
   using namespace boards;

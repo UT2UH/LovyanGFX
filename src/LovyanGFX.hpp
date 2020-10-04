@@ -46,7 +46,7 @@ Contributors:
 
 #include "lgfx/panel/Panel_HX8357.hpp"
 #include "lgfx/panel/Panel_ILI9163.hpp"
-#include "lgfx/panel/Panel_ILI9341.hpp"   // and ILI9342 / M5Stack / ODROID-GO / ESP-WROVER-KIT4.1 / WioTerminal
+#include "lgfx/panel/Panel_ILI9341.hpp"   // and ILI9342 / M5Stack / ODROID-GO / ESP-WROVER-KIT4.1 / WioTerminal / SRS
 #include "lgfx/panel/Panel_ILI9486.hpp"
 #include "lgfx/panel/Panel_ILI9488.hpp"
 #include "lgfx/panel/Panel_SSD1351.hpp"
@@ -98,6 +98,8 @@ Contributors:
   #define LGFX_LOLIN_D32_PRO
  #elif defined( ARDUINO_ESP32_WROVER_KIT )
   #define LGFX_ESP_WROVER_KIT
+ #elif defined( ARDUINO_SRS )
+  #define LGFX_SRS
  #endif
 
  #include "config/LGFX_Config_AutoDetectESP32.hpp"

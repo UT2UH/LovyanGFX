@@ -192,6 +192,61 @@ namespace lgfx
   };
 }
 
+  struct Panel_SRS : public Panel_ILI9341
+  {
+  private:
+
+    static constexpr std::int32_t freq = 400000;
+    static constexpr std::uint_fast8_t max_i2c_addr = 0x34;
+    static constexpr std::int_fast16_t max_i2c_port = I2C_NUM_1;
+    static constexpr std::int_fast16_t max_i2c_sda = 21;
+    static constexpr std::int_fast16_t max_i2c_scl = 22;
+
+  public:
+
+    Panel_SRS(void) {
+      freq_write = 40000000;
+      freq_read  = 20000000;
+      freq_fill  = 80000000;
+      spi_3wire = true;
+      spi_cs =  32;
+      spi_dc = 27;
+      rotation = 1;
+      gpio_rst = 33;
+      gpio_bl = -1;
+      pwm_ch_bl = 7;
+    }
+
+    void resetPanel(void)
+    {
+      // MAX7315 reg 0x96 = GPIO3&4 control
+      lgfx::i2c::writeRegister8(max_i2c_port, max_i2c_addr, 0x96, 0, ~0x02);
+      delay(10);
+      lgfx::i2c::writeRegister8(max_i2c_port, max_i2c_addr, 0x96, 2, ~0);
+    }
+
+    void init(void) override
+    {
+      resetPanel();
+
+      Panel_ILI9341::init();
+    }
+
+    void setBrightness(std::uint8_t brightness) override
+    {
+      this->brightness = brightness;
+      brightness = (brightness >> 3) + 72;
+      // MAX7315 reg 0x27 = DC3
+      lgfx::i2c::writeRegister8(max_i2c_port, max_i2c_addr, 0x27, brightness, 0x80);
+    }
+
+    void sleep(void) override { lgfx::i2c::bitOff(max_i2c_port, max_i2c_addr, 0x12, 0x02); } // DC3 disable
+
+    void wakeup(void) override { lgfx::i2c::bitOn(max_i2c_port, max_i2c_addr, 0x12, 0x02); } // DC3 enable
+
+  };
+}
+
 class LGFX : public lgfx::LGFX_SPI<lgfx::LGFX_Config>
 {
 public:
@@ -497,6 +552,46 @@ private:
       lgfx::gpio_lo(p_tmp.spi_cs);
       lgfx::gpio_lo(p_tmp.spi_dc);
       lgfx::gpio_lo(22);
+    }
+#endif
+
+// SRS judgment (Note that the judgment fails if M5StickC is selected in the board manager)
+#if defined ( LGFX_AUTODETECT ) || defined ( LGFX_SRS )
+    if (nvs_board == 0 || nvs_board == lgfx::board_t::board_SRS) {
+      releaseBus();
+      _spi_mosi = 23;
+      _spi_miso = 19;
+      _spi_sclk = 18;
+      initBus();
+
+      p_tmp.spi_cs   = 32;
+      p_tmp.spi_dc   = 27;
+      p_tmp.gpio_rst = 33;
+      setPanel(&p_tmp);
+
+      lgfx::lgfxPinMode(22, lgfx::pin_mode_t::output); // SRS TF card CS
+      lgfx::gpio_hi(22); //TODO
+
+      id = readPanelID();
+      if ((id & 0xFF) == 0 && readCommand32(0x09) != 0) {   // check panel (ILI9341) panelIDが0なのでステータスリードを併用する
+        ESP_LOGW("LovyanGFX", "[Autodetect] SRS");
+        board = lgfx::board_t::board_SRS;
+        auto p = new lgfx::Panel_ILI9341();
+        p->freq_write = 40000000;
+        p->freq_read  = 20000000;
+        p->freq_fill  = 80000000;
+        p->spi_3wire = true;
+        p->spi_cs = 32;
+        p->spi_dc = 27;
+        p->rotation = 1;
+        p->gpio_bl = -1;
+        p->pwm_ch_bl = 7;
+        setPanel(p);
+        goto init_clear;
+      }
+      lgfx::gpio_lo(p_tmp.spi_cs);
+      lgfx::gpio_lo(p_tmp.spi_dc);
+      lgfx::gpio_lo(22);  //TODO
     }
 #endif
 
