@@ -191,7 +191,7 @@
 //#define MINIZ_NO_MALLOC
 
 // 
-#define MINIZ_NO_COMPRESSION
+//#define MINIZ_NO_COMPRESSION
 
 
 #if defined(__TINYC__) && (defined(__linux) || defined(__linux__))
@@ -780,7 +780,7 @@ struct tinfl_decompressor_tag
 // ------------------- Low-level Compression API Definitions
 
 // Set TDEFL_LESS_MEMORY to 1 to use less memory (compression will be slightly slower, and raw/dynamic blocks will be output more frequently).
-#define TDEFL_LESS_MEMORY 0
+#define TDEFL_LESS_MEMORY 1
 
 // tdefl_init() compression flags logically OR'd together (low 12 bits contain the max. number of probes per dictionary search):
 // TDEFL_DEFAULT_MAX_PROBES: The compressor defaults to 128 dictionary probes per dictionary search. 0=Huffman only, 1=Huffman+LZ (fastest/crap compression), 4095=Huffman+LZ (slowest/best compression).
@@ -838,13 +838,17 @@ size_t tdefl_compress_mem_to_mem(void *pOut_buf, size_t out_buf_len, const void 
 void *tdefl_write_image_to_png_file_in_memory_ex(const void *pImage, int w, int h, int num_chans, size_t *pLen_out, mz_uint level, mz_bool flip);
 void *tdefl_write_image_to_png_file_in_memory(const void *pImage, int w, int h, int num_chans, size_t *pLen_out);
 
+typedef mz_uint8 *(*tdefl_get_png_row_func)(mz_uint8 *pImage, mz_bool flip, int w, int h, int y, int bpl, void *target);
+mz_uint8 *tdefl_get_png_row_default( mz_uint8 *pImage, mz_bool flip, int w, int h, int y, int bpl, void *target );
+void *tdefl_write_image_to_png_file_in_memory_ex_with_cb(const void *pImage, int w, int h, int num_chans, size_t *pLen_out, mz_uint level, mz_bool flip, tdefl_get_png_row_func cb, void *target);
+
 // Output stream interface. The compressor uses this interface to write compressed data. It'll typically be called TDEFL_OUT_BUF_SIZE at a time.
 typedef mz_bool (*tdefl_put_buf_func_ptr)(const void* pBuf, int len, void *pUser);
 
 // tdefl_compress_mem_to_output() compresses a block to an output stream. The above helpers use this function internally.
 mz_bool tdefl_compress_mem_to_output(const void *pBuf, size_t buf_len, tdefl_put_buf_func_ptr pPut_buf_func, void *pPut_buf_user, int flags);
 
-enum { TDEFL_MAX_HUFF_TABLES = 3, TDEFL_MAX_HUFF_SYMBOLS_0 = 288, TDEFL_MAX_HUFF_SYMBOLS_1 = 32, TDEFL_MAX_HUFF_SYMBOLS_2 = 19, TDEFL_LZ_DICT_SIZE = 32768, TDEFL_LZ_DICT_SIZE_MASK = TDEFL_LZ_DICT_SIZE - 1, TDEFL_MIN_MATCH_LEN = 3, TDEFL_MAX_MATCH_LEN = 258 };
+enum { TDEFL_MAX_HUFF_TABLES = 3, TDEFL_MAX_HUFF_SYMBOLS_0 = 288, TDEFL_MAX_HUFF_SYMBOLS_1 = 32, TDEFL_MAX_HUFF_SYMBOLS_2 = 19, TDEFL_LZ_DICT_SIZE = 4096, TDEFL_LZ_DICT_SIZE_MASK = TDEFL_LZ_DICT_SIZE - 1, TDEFL_MIN_MATCH_LEN = 3, TDEFL_MAX_MATCH_LEN = 258 };
 
 // TDEFL_OUT_BUF_SIZE MUST be large enough to hold a single entire compressed output block (using static/fixed Huffman codes).
 #if TDEFL_LESS_MEMORY
@@ -951,9 +955,22 @@ typedef unsigned char mz_validate_uint64[sizeof(mz_uint64)==8 ? 1 : -1];
   #define MZ_FREE(x) (void)x, ((void)0)
   #define MZ_REALLOC(p, x) NULL
 #else
-  #define MZ_MALLOC(x) malloc(x)
-  #define MZ_FREE(x) free(x)
-  #define MZ_REALLOC(p, x) realloc(p, x)
+  #ifdef BOARD_HAS_PSRAM
+    #if __has_include(<esp32/spiram.h>)
+      #include <esp32/spiram.h>
+    #else
+      #include <esp_spiram.h>
+    #endif
+    #include "soc/efuse_reg.h"
+    #include "esp_heap_caps.h"
+    #define MZ_MALLOC(x) heap_caps_malloc(x, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)
+    #define MZ_FREE(x) free(x)
+    #define MZ_REALLOC(p, x) heap_caps_realloc(p, x, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT)
+  #else
+    #define MZ_MALLOC(x) malloc(x)
+    #define MZ_FREE(x) free(x)
+    #define MZ_REALLOC(p, x) realloc(p, x)
+  #endif
 #endif
 
 #define MZ_MAX(a,b) (((a)>(b))?(a):(b))
@@ -1380,21 +1397,13 @@ const char *mz_error(int err)
 // TODO: If the caller has indicated that there's no more input, and we attempt to read beyond the input buf, then something is wrong with the input because the inflator never
 // reads ahead more than it needs to. Currently TINFL_GET_BYTE() pads the end of the stream with 0's in this scenario.
 #define TINFL_GET_BYTE(state_index, c) do { \
-  if (pIn_buf_cur >= pIn_buf_end) { \
-    for ( ; ; ) { \
-      if (decomp_flags & TINFL_FLAG_HAS_MORE_INPUT) { \
-        TINFL_CR_RETURN(state_index, TINFL_STATUS_NEEDS_MORE_INPUT); \
-        if (pIn_buf_cur < pIn_buf_end) { \
-          c = *pIn_buf_cur++; \
-          break; \
-        } \
-      } else { \
-        c = 0; \
-        break; \
-      } \
-    } \
-  } else c = *pIn_buf_cur++; } MZ_MACRO_END
-
+  while (pIn_buf_cur >= pIn_buf_end && (decomp_flags & TINFL_FLAG_HAS_MORE_INPUT)) { \
+    TINFL_CR_RETURN(state_index, TINFL_STATUS_NEEDS_MORE_INPUT); \
+  } \
+  c = 0; \
+  if (pIn_buf_cur < pIn_buf_end) { \
+    c = *pIn_buf_cur++; \
+  } } MZ_MACRO_END
 #define TINFL_NEED_BITS(state_index, n) do { mz_uint c; TINFL_GET_BYTE(state_index, c); bit_buf |= (((tinfl_bit_buf_t)c) << num_bits); num_bits += 8; } while (num_bits < (mz_uint)(n))
 #define TINFL_SKIP_BITS(state_index, n) do { if (num_bits < (mz_uint)(n)) { TINFL_NEED_BITS(state_index, n); } bit_buf >>= (n); num_bits -= (n); } MZ_MACRO_END
 #define TINFL_GET_BITS(state_index, b, n) do { if (num_bits < (mz_uint)(n)) { TINFL_NEED_BITS(state_index, n); } b = bit_buf & ((1 << (n)) - 1); bit_buf >>= (n); num_bits -= (n); } MZ_MACRO_END
@@ -1524,7 +1533,7 @@ tinfl_status tinfl_decompress(tinfl_decompressor *r, const mz_uint8 *pIn_buf_nex
       {
         int tree_next, tree_cur; tinfl_huff_table *pTable;
         mz_uint i, j, used_syms, total, sym_index, next_code[17], total_syms[16]; pTable = &r->m_tables[r->m_type]; MZ_CLEAR_OBJ(total_syms); MZ_CLEAR_OBJ(pTable->m_look_up); MZ_CLEAR_OBJ(pTable->m_tree);
-        for (i = 0; i < r->m_table_sizes[r->m_type]; ++i) total_syms[pTable->m_code_size[i]]++;
+        i = r->m_table_sizes[r->m_type] - 1; do { total_syms[pTable->m_code_size[i]]++; } while (--i != ~0u);
         used_syms = 0, total = 0; next_code[0] = next_code[1] = 0;
         for (i = 1; i <= 15; ++i) { used_syms += total_syms[i]; next_code[i + 1] = (total = ((total + total_syms[i]) << 1)); }
         if ((65536 != total) && (used_syms > 1))
@@ -1666,20 +1675,11 @@ tinfl_status tinfl_decompress(tinfl_decompressor *r, const mz_uint8 *pIn_buf_nex
           }
         }
 #endif
-        do
-        {
-          pOut_buf_cur[0] = pSrc[0];
-          pOut_buf_cur[1] = pSrc[1];
-          pOut_buf_cur[2] = pSrc[2];
-          pOut_buf_cur += 3; pSrc += 3;
-        } while ((int)(counter -= 3) > 2);
-        if ((int)counter > 0)
-        {
-          pOut_buf_cur[0] = pSrc[0];
-          if ((int)counter > 1)
-            pOut_buf_cur[1] = pSrc[1];
-          pOut_buf_cur += counter;
-        }
+        mz_uint32 i = 0;
+        do {
+          pOut_buf_cur[i] = pSrc[i];
+        } while (++i != counter);
+        pOut_buf_cur += counter;
       }
     }
   } while (!(r->m_final & 1));
@@ -2331,7 +2331,12 @@ static MZ_FORCEINLINE void tdefl_find_match(tdefl_compressor *d, mz_uint lookahe
         if ((d->m_dict[probe_pos + match_len] == c0) && (d->m_dict[probe_pos + match_len - 1] == c1)) break;
       TDEFL_PROBE; TDEFL_PROBE; TDEFL_PROBE;
     }
-    if (!dist) break; p = s; q = d->m_dict + probe_pos; for (probe_len = 0; probe_len < max_match_len; probe_len++) if (*p++ != *q++) break;
+    if (!dist) break;
+    p = s; q = d->m_dict + probe_pos;
+    for (probe_len = 0; probe_len < max_match_len; probe_len++)
+    {
+      if (*p++ != *q++) break;
+    }
     if (probe_len > match_len)
     {
       *pMatch_dist = dist; if ((*pMatch_len = match_len = probe_len) == max_match_len) return;
@@ -2812,22 +2817,49 @@ mz_uint tdefl_create_comp_flags_from_zip_params(int level, int window_bits, int 
 #pragma warning (disable:4204) // nonstandard extension used : non-constant aggregate initializer (also supported by GNU C and C99, so no big deal)
 #endif
 
+mz_uint8 *tdefl_get_png_row_default( mz_uint8 *pImage, mz_bool flip, int w, int h, int y, int bpl, void *target ) {
+  (void)target; // unused here
+  (void)w;
+  return (mz_uint8*)pImage + (flip ? (h - 1 - y) : y) * bpl;
+}
+
 // Simple PNG writer function by Alex Evans, 2011. Released into the public domain: https://gist.github.com/908299, more context at
 // http://altdevblogaday.org/2011/04/06/a-smaller-jpg-encoder/.
 // This is actually a modification of Alex's original code so PNG files generated by this function pass pngcheck.
 void *tdefl_write_image_to_png_file_in_memory_ex(const void *pImage, int w, int h, int num_chans, size_t *pLen_out, mz_uint level, mz_bool flip)
 {
+  return tdefl_write_image_to_png_file_in_memory_ex_with_cb(pImage, w, h, num_chans, pLen_out, level, flip, &tdefl_get_png_row_default, NULL);
+}
+
+void *tdefl_write_image_to_png_file_in_memory_ex_with_cb(const void *pImage, int w, int h, int num_chans, size_t *pLen_out, mz_uint level, mz_bool flip, tdefl_get_png_row_func cb, void *target)
+{
+  tdefl_get_png_row_func get_row_func = cb;
   // Using a local copy of this array here in case MINIZ_NO_ZLIB_APIS was defined.
   static const mz_uint s_tdefl_png_num_probes[11] = { 0, 1, 6, 32,  16, 32, 128, 256,  512, 768, 1500 };
   tdefl_compressor *pComp = (tdefl_compressor *)MZ_MALLOC(sizeof(tdefl_compressor)); tdefl_output_buffer out_buf; int i, bpl = w * num_chans, y, z; mz_uint32 c; *pLen_out = 0;
   if (!pComp) return NULL;
-  MZ_CLEAR_OBJ(out_buf); out_buf.m_expandable = MZ_TRUE; out_buf.m_capacity = 57+MZ_MAX(64, (1+bpl)*h); if (NULL == (out_buf.m_pBuf = (mz_uint8*)MZ_MALLOC(out_buf.m_capacity))) { MZ_FREE(pComp); return NULL; }
+  MZ_CLEAR_OBJ(out_buf); out_buf.m_expandable = MZ_TRUE; out_buf.m_capacity = 57+MZ_MAX(64, (1+bpl)*h);
+  if (NULL == (out_buf.m_pBuf = (mz_uint8*)MZ_MALLOC(out_buf.m_capacity)))
+  {
+    MZ_FREE(pComp);
+    return NULL;
+  }
+
   // write dummy header
   for (z = 41; z; --z) tdefl_output_buffer_putter(&z, 1, &out_buf);
   // compress image data
   tdefl_init(pComp, tdefl_output_buffer_putter, &out_buf, s_tdefl_png_num_probes[MZ_MIN(10, level)] | TDEFL_WRITE_ZLIB_HEADER);
-  for (y = 0; y < h; ++y) { tdefl_compress_buffer(pComp, &z, 1, TDEFL_NO_FLUSH); tdefl_compress_buffer(pComp, (mz_uint8*)pImage + (flip ? (h - 1 - y) : y) * bpl, bpl, TDEFL_NO_FLUSH); }
-  if (tdefl_compress_buffer(pComp, NULL, 0, TDEFL_FINISH) != TDEFL_STATUS_DONE) { MZ_FREE(pComp); MZ_FREE(out_buf.m_pBuf); return NULL; }
+  for (y = 0; y < h; ++y)
+  {
+    tdefl_compress_buffer(pComp, &z, 1, TDEFL_NO_FLUSH);
+    tdefl_compress_buffer(pComp, get_row_func( (mz_uint8*)pImage, flip, w, h, y, bpl, target ), bpl, TDEFL_NO_FLUSH);
+  }
+  if (tdefl_compress_buffer(pComp, NULL, 0, TDEFL_FINISH) != TDEFL_STATUS_DONE)
+  {
+    MZ_FREE(pComp);
+    MZ_FREE(out_buf.m_pBuf);
+    return NULL;
+  }
   // write real header
   *pLen_out = out_buf.m_size-41;
   {
@@ -2839,7 +2871,12 @@ void *tdefl_write_image_to_png_file_in_memory_ex(const void *pImage, int w, int 
     memcpy(out_buf.m_pBuf, pnghdr, 41);
   }
   // write footer (IDAT CRC-32, followed by IEND chunk)
-  if (!tdefl_output_buffer_putter("\0\0\0\0\0\0\0\0\x49\x45\x4e\x44\xae\x42\x60\x82", 16, &out_buf)) { *pLen_out = 0; MZ_FREE(pComp); MZ_FREE(out_buf.m_pBuf); return NULL; }
+  if (!tdefl_output_buffer_putter("\0\0\0\0\0\0\0\0\x49\x45\x4e\x44\xae\x42\x60\x82", 16, &out_buf)) {
+    *pLen_out = 0;
+    MZ_FREE(pComp);
+    MZ_FREE(out_buf.m_pBuf);
+    return NULL;
+  }
   c = (mz_uint32)mz_crc32(MZ_CRC32_INIT,out_buf.m_pBuf+41-4, *pLen_out+4); for (i=0; i<4; ++i, c<<=8) (out_buf.m_pBuf+out_buf.m_size-16)[i] = (mz_uint8)(c >> 24);
   // compute final size of file, grab compressed data buffer and return
   *pLen_out += 57; MZ_FREE(pComp); return out_buf.m_pBuf;
