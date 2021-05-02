@@ -1,11 +1,11 @@
 
-// このサンプルの実行にはefontが必要です。
+// You need efont to run this sample.
 // need efont to run this example.
 //
 // URL : https://github.com/tanakamasayuki/efont
 //
 
-// 使用する文字セットに応じたヘッダをincludeします。
+// Include the header according to the character set to be used.
 // Include a header corresponding to the character set used.
 //#include <efontEnableAll.h>
 //#include <efontEnableAscii.h>
@@ -16,11 +16,11 @@
 //#include <efontEnableKr.h>
 //#include <efontEnableTw.h>
 
-// efontのフォントデータをincludeします。
+// Include the font data of efont.
 // Include the font data of efont.
 #include <efontFontData.h>
 
-// LovyanGFXより先に efontのincludeが必要です。
+// efont must be included before LovyanGFX.
 // need to include efont before LovyanGFX.
 #include <LovyanGFX.hpp>
 
@@ -30,7 +30,7 @@ void setup()
 {
   lcd.init();
 
-  // setFont関数に引数efontを指定すると、printやdrawString等でefontを使用できます。
+  // If you specify the argument efont in the setFont function, you can use efont in print, drawString, etc.
   lcd.setFont(&fonts::efont);
 
   lcd.setTextWrap(true, true);

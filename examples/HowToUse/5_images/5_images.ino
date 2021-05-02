@@ -15,182 +15,167 @@ static LGFX lcd;
 void setup(void)
 {
   lcd.init();
-  lcd.startWrite();
+  lcd. startWrite ();
 }
 
 void loop(void)
 {
 
 /*
-  画像データを描画する関数は幾つか種類があります。
-
-方法１．事前に描画範囲を設定しておき、次にデータの長さを指定して描画する方法
-方法２．描画する座標と幅・高さを指定してデータを描画する方法
-
-
-
-方法１．事前に描画範囲を設定しておき、次にデータの長さを指定して描画する方法
-
-この方法では、setWindow/setAddrWindow関数で描画範囲を設定したあと、
-writePixels/pushPixels関数で画像データの長さを指定して描画します。
-
-  setWindow( x0, y0, x1, y1 );   // 描画範囲の指定。左上座標と右下座標を指定します。
-  setAddrWindow( x, y, w, h );   // 描画範囲の指定。左上座標と幅と高さを指定します。
-
-setWindow は画面外の座標を指定した場合の動作は保証されません。
-setAddrWindow は描画範囲外が指定された場合は範囲内に調整されます。
- ※ ただし自動調整された結果、実際に設定される幅や高さが指定した値より小さくなる可能性があるので注意が必要です。
-
-  writePixels   ( *data, len, swap );  // 画像を描画する。(事前にstartWrite、事後にendWriteが必要）
-  pushPixels    ( *data, len, swap );  // 画像を描画する。(startWrite・endWriteは不要）
-
- ※ writePixelsはAdafruitGFX由来の関数で、pushPixelsはTFT_eSPI由来の関数です。
-    描画内容は同等ですが、startWrite/endWriteが自動で行われるか否かが違います。
-
-第１引数：画像データのポインタ（データ型に応じて色の形式を判断して変換が行われます。）
-第２引数：画像データのピクセル数（バイト数でない点に注意。）
-第３引数：バイト順変換フラグ（省略時は事前にsetSwapBytes関数で設定した値が使用されます。）
-
-第１引数のdataの型に基づいて色の形式変換が行われます。
-  uint8_t*  の場合、 8bitカラー RGB332として扱います。
-  uint16_t* の場合、16bitカラー RGB565として扱います。
-  void*     の場合、24bitカラー RGB888として扱います。
- ※ （３バイトのプリミティブ型が無いため、void*型を24bitカラー扱いとしています）
-
- ※ LCDに描画する際に、LCDの色数モードに応じて色形式の変換が自動的に行われます。
+  There are several types of functions that draw image data.
+Method 1. How to set the drawing range in advance and then specify the length of the data to draw
+Method 2. How to draw data by specifying the coordinates to draw and the width and height
+Method 1. How to set the drawing range in advance and then specify the length of the data to draw
+In this method, after setting the drawing range with the setWindow / setAddrWindow function,
+Use the writePixels / pushPixels function to specify the length of the image data and draw it.
+  setWindow (x0, y0, x1, y1); // Specify the drawing range. Specify the upper left and lower right coordinates.
+  setAddrWindow (x, y, w, h); // Specify the drawing range. Specify the upper left coordinates, width and height.
+The operation of setWindow is not guaranteed when the coordinates outside the screen are specified.
+setAddrWindow is adjusted within the range if it is specified outside the drawing range.
+ * However, as a result of automatic adjustment, the width and height that are actually set may be smaller than the specified values, so be careful.
+  writePixels (* data, len, swap); // Draw the image. (StartWrite is required in advance and endWrite is required after the fact)
+  pushPixels (* data, len, swap); // Draw the image. (No need for startWrite / endWrite)
+ * WritePixels is a function derived from AdafruitGFX, and pushPixels is a function derived from TFT_eSPI.
+    The drawing contents are the same, but whether or not startWrite / endWrite is performed automatically is different.
+First argument: Pointer of image data (The color format is determined according to the data type and conversion is performed.)
+Second argument: Number of pixels in image data (Note that it is not the number of bytes.)
+Third argument: Byte order conversion flag (If omitted, the value set in advance by the setSwapBytes function is used.)
+Color format conversion is performed based on the data type of the first argument.
+  In the case of uint8_t *, it is treated as 8-bit color RGB332.
+  In case of uint16_t *, it is treated as 16bit color RGB565.
+  If it is void *, it is treated as 24-bit color RGB888.
+ * (Since there is no 3-byte primitive type, void * type is treated as 24-bit color)
+ * When drawing on the LCD, the color format is automatically converted according to the color mode of the LCD.
 */
   lcd.clear(TFT_DARKGREY);
-  lcd.setColorDepth(16);  // LCDを16bitカラーモードに設定する。
-  lcd.setSwapBytes(true); // バイト順変換を有効にする。
+  lcd. setColorDepth ( 16 );   // Set the LCD to 16bit color mode.
+  lcd. setSwapBytes ( true ); // Enable byte order conversion.
   int len = image_width * image_height;
 
-  // 画像の幅と高さをsetAddrWindowで事前に設定し、writePixelsで描画します。
-  lcd.setAddrWindow(0, 0, image_width, image_height);         // 描画範囲を設定。
-  lcd.writePixels((uint16_t*)rgb565, len); // RGB565の16bit画像データを描画。
+  // Set the width and height of the image in advance with setAddrWindow and draw with writePixels.
+  lcd. setAddrWindow ( 0 , 0 , image_width, image_height);          // Set the drawing range.
+  lcd. writePixels (( uint16_t *) rgb565, len); // Draw 16bit image data of RGB565.
 
-  // データとバイト順変換の指定が一致していない場合、色化けします。
+  // If the data and byte order conversion specifications do not match, the color will be garbled.
   lcd.setAddrWindow(0, 40, image_width, image_height);
-  // 第3引数でfalseを指定することでバイト順変換の有無を指定できます。
-  lcd.writePixels((uint16_t*)rgb565, len, false); // RGB565の画像をバイト順変換無しで描画すると色が化ける。
+  // You can specify the presence or absence of byte order conversion by specifying false in the third argument.
+  lcd. writePixels (( uint16_t *) rgb565, len, false ); // Colors are garbled when drawing an RGB565 image without byte order conversion.
 
-  // 描画範囲が画面外にはみ出すなどして画像の幅や高さと合わなくなった場合、描画結果が崩れます。
-  lcd.setAddrWindow(-1, 80, image_width, image_height); // X座標が-1（画面外）のため、正しく設定できない。
-  lcd.writePixels((uint16_t*)rgb565, len); // 描画先の幅と画像の幅が不一致のため描画内容が崩れる。
+  // If the drawing range does not match the width and height of the image, such as outside the screen, the drawing result will be corrupted.
+  lcd. setAddrWindow ( -1 , 80 , image_width, image_height); // The X coordinate is -1 (outside the screen), so it cannot be set correctly.
+  lcd. writePixels (( uint16_t *) rgb565, len); // The drawing content is corrupted because the width of the drawing destination and the width of the image do not match.
 
-  // データと型が一致していない場合も、描画結果が崩れます。
+  // Even if the data and type do not match, the drawing result will be corrupted.
   lcd.setAddrWindow(0, 120, image_width, image_height);
-  // RGB565のデータをわざとuint8_tにキャストし、RGB332の8bitカラーとして扱わせる。
-  lcd.writePixels((uint8_t*)rgb565, len);  // 画像の形式と型が一致していないため描画が乱れる。
+  // Cast RGB565 data to uint8_t on purpose and treat it as RGB332 8-bit color.
+  lcd. writePixels (( uint8_t *) rgb565, len);   // The drawing is disturbed because the image format and type do not match.
 
-  // データと型が一致していれば、描画先の色数に合わせて適切な形式変換が行われます。
+  // If the data and type match, the appropriate format conversion will be performed according to the number of colors of the drawing destination.
   lcd.setAddrWindow(0, 160, image_width, image_height);
-  lcd.writePixels((uint8_t*)rgb332, len);  // RGB332のデータでも16bitカラーのLCDに正しく描画できる。
+  lcd. writePixels (( uint8_t *) rgb332, len);   // Even RGB332 data can be drawn correctly on a 16-bit color LCD.
 
 
-// ※ LCDへの画像データの送信は、メモリの若いアドレスにあるデータから順に1Byte単位で送信されます。
-//    このため、例えばRGB565の16bit型のデータを素直にuint16_tの配列で用意すると、送信の都合としてはバイト順が入れ替わった状態になります。
-//    この場合は事前にsetSwapBytes(true)を使用したり、第３引数にtrueを指定する事で、バイト順の変換が行われて正常に描画できます。
-//    なお用意する画像データを予め上位下位バイトを入れ替えた状態で作成すれば、この変換は不要になり速度面で有利になります。
+// * Image data is sent to the LCD in 1-byte units in order from the data at the youngest address in the memory.
+//     For this reason, for example, if RGB565 16-bit type data is prepared in an array of uint16_t obediently, the byte order will be changed for convenience of transmission.
+// In     this case, by using setSwapBytes (true) in advance or specifying true in the 3rd argument, byte order conversion is performed and drawing can be performed normally.
+// If     the image data to be prepared is created with the upper and lower bytes replaced in advance, this conversion becomes unnecessary and it is advantageous in terms of speed.
 
   lcd.setAddrWindow(40,  0, image_width, image_height);
-  lcd.writePixels((uint16_t*)swap565, len, false); // 予め上位下位が入れ替わった16bitデータの場合はバイト順変換を無効にする。
+  lcd. writePixels (( uint16_t *) swap565, len, false ); // Disable byte order conversion for 16-bit data with the upper and lower levels swapped in advance.
 
   lcd.setAddrWindow(40, 40, image_width, image_height);
-  lcd.writePixels((uint16_t*)swap565, len, true);  // 逆に、予め上位下位が入れ替わったデータにバイト順変換を行うと色が化ける。
+  lcd. writePixels (( uint16_t *) swap565, len, true );   // On the contrary, the color is garbled when byte order conversion is performed on the data in which the upper and lower parts are exchanged in advance.
 
   lcd.setAddrWindow(40, 80, image_width, image_height);
-  lcd.writePixels((void*)rgb888, len, true);  // 24bitのデータも同様に、RGB888の青が下位側にあるデータはバイト順変換が必要。
+  lcd. writePixels (( void *) rgb888, len, true );   // Similarly for 24-bit data, byte order conversion is required for data with RGB888 blue on the lower side.
 
   lcd.setAddrWindow(40, 120, image_width, image_height);
-  lcd.writePixels((void*)bgr888, len, false);  // 同様に、BGR888の赤が下位側にあるデータはバイト順変換は不要。
+  lcd. writePixels (( void *) bgr888, len, false );   // Similarly, data with red on the lower side of BGR888 does not need byte order conversion.
 
   lcd.setAddrWindow(40, 160, image_width, image_height);
-  lcd.writePixels((void*)bgr888, len, true);  // 設定を誤ると、色が化ける。（赤と青が入れ替わる）
+  lcd. writePixels (( void *) bgr888, len, true );   // If the setting is wrong, the color will be garbled . (Red and blue switch)
 
   lcd.display();
   delay(4000);
   lcd.clear(TFT_DARKGREY);
 
 /*
-方法２．描画する座標と幅・高さを指定してデータを描画する方法
-
-この方法では、pushImage関数を用いて描画範囲と描画データを指定して描画します。
-
-  pushImage( x, y, w, h, *data);                  // 指定された座標に画像を描画する。
-
-方法１と違い、画面外にはみ出す座標を指定しても描画が乱れることはありません。（はみ出した部分は描画されません。）
-方法１と違い、バイト順の変換を指定する引数が無いため、事前にsetSwapBytesによる設定が必要です。
-なお方法１と同様に、dataの型に応じて色変換が行われます。
+Method 2. How to draw data by specifying the coordinates to draw and the width and height
+In this method, the pushImage function is used to specify the drawing range and drawing data for drawing.
+  pushImage (x, y, w, h, * data); // Draw an image at the specified coordinates.
+Unlike method 1, the drawing will not be disturbed even if you specify the coordinates that extend off the screen. (The protruding part is not drawn.)
+Unlike method 1, there is no argument to specify the conversion in byte order, so it is necessary to set by setSwapBytes in advance.
+As with method 1, color conversion is performed according to the data type.
 */
 
-  lcd.setSwapBytes(true); // バイト順変換を有効にする。
+  lcd. setSwapBytes ( true ); // Enable byte order conversion.
 
-  // 描画先の座標と画像の幅・高さを指定して画像データを描画します。
-  lcd.pushImage(   0, 0, image_width, image_height, (uint16_t*)rgb565); // RGB565の16bit画像データを描画。
+  // Draw the image data by specifying the coordinates of the drawing destination and the width / height of the image.
+  lcd. pushImage (    0 , 0 , image_width, image_height, ( uint16_t *) rgb565); // Draw 16bit image data of RGB565.
 
-  // データとバイト順変換の指定が一致していない場合、色化けします。
-  lcd.pushImage(   0, 40, image_width, image_height, (uint16_t*)swap565); // NG. バイト順変換済みデータにバイト順変換を行うと色化けする。
+  // If the data and byte order conversion specifications do not match, the color will be garbled.
+  lcd. pushImage (    0 , 40 , image_width, image_height, ( uint16_t *) swap565); // NG. Byte order converted data is garbled when byte order conversion is performed.
 
-  // 描画範囲が画面外にはみ出すなどした場合でも、描画結果が崩れることはありません。
-  lcd.pushImage(-1, 80, image_width, image_height, (uint16_t*)rgb565); // X座標-1（画面外）を指定しても描画は乱れない。
+  // Even if the drawing range goes off the screen, the drawing result will not be corrupted.
+  lcd. pushImage ( -1 , 80 , image_width, image_height, ( uint16_t *) rgb565); // Drawing is not disturbed even if X coordinate -1 (outside the screen) is specified.
 
-  // データと型が一致していない場合は、描画結果が崩れます。
-  lcd.pushImage(0, 120, image_width, image_height, (uint8_t*)rgb565); // RGB565のデータをuint8_tにキャストし、RGB332として扱わせると描画が乱れる。
+  // If the data and type do not match, the drawing result will be corrupted.
+  lcd. pushImage ( 0 , 120 , image_width, image_height, ( uint8_t *) rgb565); // Casting RGB565 data to uint8_t and treating it as RGB332 will disturb the drawing.
 
-  // データと型が一致していれば、適切に形式変換が行われます。
-  lcd.pushImage(0, 160, image_width, image_height, (uint8_t*)rgb332); // RGB332のデータでも正しく描画できる。
+  // If the data and type match, the format conversion will be done properly.
+  lcd. pushImage ( 0 , 160 , image_width, image_height, ( uint8_t *) rgb332); // Even RGB332 data can be drawn correctly.
 
 
-  lcd.setSwapBytes(false);   // バイト順の変換を無効にする。
-  lcd.pushImage( 40,   0, image_width, image_height, (uint8_t* )rgb332);  // good. RGB332のデータはバイト順変換の影響を受けない。
-  lcd.pushImage( 40,  40, image_width, image_height, (uint16_t*)rgb565);  // NG. RGB565のデータはバイト順変換が必要。
-  lcd.pushImage( 40,  80, image_width, image_height, (void*    )rgb888);  // NG. RGB888のデータはバイト順変換が必要。
-  lcd.pushImage( 40, 120, image_width, image_height, (uint16_t*)swap565); // good. バイト順変換済みRGB565のデータは色化けしない。
-  lcd.pushImage( 40, 160, image_width, image_height, (void*    )bgr888);  // good. バイト順変換済みRGB888のデータは色化けしない。
+  lcd. setSwapBytes ( false );    // Disable byte order conversion.
+  lcd. pushImage ( 40 ,    0 , image_width, image_height, ( uint8_t *) rgb332);   // good. RGB332 data is not affected by byte order conversion.
+  lcd. pushImage ( 40 ,   40 , image_width, image_height, ( uint16_t *) rgb565);   // NG. RGB565 data requires byte order conversion.
+  lcd. pushImage ( 40 ,   80 , image_width, image_height, ( void *) rgb888);   // NG. RGB888 data requires byte order conversion.
+  lcd. pushImage ( 40 , 120 , image_width, image_height, ( uint16_t *) swap565); // good. Byte order converted RGB565 data is not garbled.
+  lcd. pushImage ( 40 , 160 , image_width, image_height, ( void *) bgr888);   // good. Byte order converted RGB888 data is not garbled.
 
-  lcd.setSwapBytes(true);   // バイト順の変換を有効にする。
-  lcd.pushImage( 80,   0, image_width, image_height, (uint8_t* )rgb332);  // good. RGB332のデータはバイト順変換の影響を受けない。
-  lcd.pushImage( 80,  40, image_width, image_height, (uint16_t*)rgb565);  // good. バイト順変換が有効ならRGB565のデータは色化けしない。
-  lcd.pushImage( 80,  80, image_width, image_height, (void*    )rgb888);  // good. バイト順変換が有効ならRGB888のデータは色化けしない。
-  lcd.pushImage( 80, 120, image_width, image_height, (uint16_t*)swap565); // NG. バイト順変換済みデータにバイト順変換を行うと色化けする。
-  lcd.pushImage( 80, 160, image_width, image_height, (void*    )bgr888);  // NG. バイト順変換済みデータにバイト順変換を行うと色化けする。
+  lcd. setSwapBytes ( true );    // Enable byte order conversion.
+  lcd. pushImage ( 80 ,    0 , image_width, image_height, ( uint8_t *) rgb332);   // good. RGB332 data is not affected by byte order conversion.
+  lcd. pushImage ( 80 ,   40 , image_width, image_height, ( uint16_t *) rgb565);   // good. RGB565 data will not be garbled if byte order conversion is enabled.
+  lcd. pushImage ( 80 ,   80 , image_width, image_height, ( void *) rgb888);   // good. RGB888 data will not be garbled if byte order conversion is enabled.
+  lcd. pushImage ( 80 , 120 , image_width, image_height, ( uint16_t *) swap565); // NG. Byte order converted data is garbled when byte order conversion is performed.
+  lcd. pushImage ( 80 , 160 , image_width, image_height, ( void *) bgr888);   // NG. Byte order converted data is garbled when byte order conversion is performed.
 
-// データの型として、lgfx::名前空間に定義されている型を利用する事もできます。
-// これらの型にキャストする場合はsetSwapBytesの設定は無視されます。
+// You can also use the type defined in the lgfx :: namespace as the data type.
+// When casting to these types, the setSwapBytes setting is ignored.
   lcd.pushImage(120,   0, image_width, image_height, (lgfx:: rgb332_t*) rgb332); // good  8bitデータ
   lcd.pushImage(120,  40, image_width, image_height, (lgfx:: rgb565_t*) rgb565); // good 16bitデータ
   lcd.pushImage(120,  80, image_width, image_height, (lgfx:: rgb888_t*) rgb888); // good 24bitデータ
-  lcd.pushImage(120, 120, image_width, image_height, (lgfx::swap565_t*)swap565); // good バイト順変換済み16bitデータ
-  lcd.pushImage(120, 160, image_width, image_height, (lgfx:: bgr888_t*) bgr888); // good バイト順変換済み24bitデータ
+  lcd. pushImage ( 120 , 120 , image_width, image_height, (lgfx :: swap565_t *) swap565); // good Byte order converted 16bit data
+  lcd. pushImage ( 120 , 160 , image_width, image_height, (lgfx :: bgr888_t *) bgr888); // good byte-order converted 24-bit data
 
-// 第６引数で透過色を指定できます。透過指定された色のある部分は描画されません。
-  lcd.pushImage(160,   0, image_width, image_height, (lgfx:: rgb332_t*) rgb332, 0);                   // 黒を透過指定
-  lcd.pushImage(160,  40, image_width, image_height, (lgfx:: rgb565_t*) rgb565, (uint8_t)0xE0);       // 赤を透過指定
-  lcd.pushImage(160,  80, image_width, image_height, (lgfx:: rgb888_t*) rgb888, (uint16_t)0x07E0);    // 緑を透過指定
-  lcd.pushImage(160, 120, image_width, image_height, (lgfx::swap565_t*)swap565, (uint32_t)0x0000FFU); // 青を透過指定
-  lcd.pushImage(160, 160, image_width, image_height, (lgfx:: bgr888_t*) bgr888, TFT_WHITE);           // 白を透過指定
+// You can specify the transparent color with the 6th argument. The part with the color specified as transparent is not drawn.
+  lcd. pushImage ( 160 ,    0 , image_width, image_height, (lgfx :: rgb332_t *) rgb332, 0 );                    // Specify black transparent
+  lcd. pushImage ( 160 ,   40 , image_width, image_height, (lgfx :: rgb565_t *) rgb565, ( uint8_t ) 0xE0 );        // Red is transparent
+  lcd. pushImage ( 160 ,   80 , image_width, image_height, (lgfx :: rgb888_t *) rgb888, ( uint16_t ) 0x07E0 );     // Green transparent
+  lcd. pushImage ( 160 , 120 , image_width, image_height, (lgfx :: swap565_t *) swap565, ( uint32_t ) 0x0000FFU ); // Blue transparent
+  lcd. pushImage ( 160 , 160 , image_width, image_height, (lgfx :: bgr888_t *) bgr888, TFT_WHITE);            // White is transparent
 
   lcd.display();
   delay(4000);
   lcd.clear(TFT_DARKGREY);
 
-// pushImageRotateZoom関数を使うと、画像を回転拡大縮小させて描画できます。
+// You can use the pushImageRotateZoom function to rotate and scale the image for drawing.
   for (int angle = 0; angle <= 360; ++angle) {
-    lcd.pushImageRotateZoom
-      ( lcd.width()  >> 2  // 描画先の中心座標X
-      , lcd.height() >> 1  // 描画先の中心座標Y
-      , image_width  >> 1  // 画像の中心座標X
-      , image_height >> 1  // 画像の中心座標Y
-      , angle              // 回転角度
-      , 3.0                // X方向の描画倍率 (マイナス指定で反転可能)
-      , 3.0                // Y方向の描画倍率 (マイナス指定で反転可能)
-      , image_width        // 画像データの幅
-      , image_height       // 画像データの高さ
-      , rgb332             // 画像データのポインタ
+    lcd. pushImageRotateZoom
+      (lcd. width () >> 2   // Center coordinates of drawing destination X
+      , lcd. height () >> 1   // Center coordinates of drawing destination Y
+      , image_width >> 1   // Image center coordinates X
+      , image_height >> 1   // Image center coordinates Y
+      , angle               // Rotation angle
+      , 3.0                 // Magnification in X direction (can be inverted by specifying minus)
+      , 3.0                 // Magnification in Y direction (can be reversed by specifying minus)
+      , image_width         // Image data width
+      , image_height        // Height of image data
+      , rgb332              // Pointer of image data
       );
 
-// pushImageRotateZoomWithAA関数を使うと、アンチエイリアスが有効になります。
-    lcd.pushImageRotateZoomWithAA
+// Use the pushImageRotateZoomWithAA function to enable antialiasing.
+    lcd. pushImageRotateZoomWithAA
       ( lcd.width()*3>> 2
       , lcd.height() >> 1
       , image_width  >> 1
@@ -208,10 +193,10 @@ setAddrWindow は描画範囲外が指定された場合は範囲内に調整さ
 
   lcd.clear(TFT_DARKGREY);
 
-// pushImageAffine関数を使うと、画像をアフィン変換で変形させて描画できます。
-// アフィン変換のパラメータはfloat型の配列で指定します。
+// You can use the pushImageAffine function to transform an image with affine transformation and draw it.
+// Specify the affine transformation parameters as a float type array.
   {
-    float matrix[6] = // 等倍表示
+    float matrix[ 6 ] = // equal multiple representation
       { 1.0,  0.0,  (float)lcd.width()  / 2
       , 0.0,  1.0,  (float)lcd.height() / 2 };
     lcd.pushImageAffine(matrix, image_width, image_height, rgb332);
@@ -222,7 +207,7 @@ setAddrWindow は描画範囲外が指定された場合は範囲内に調整さ
   lcd.clear(TFT_DARKGREY);
 
   {
-    float matrix[6] = // 横２倍表示
+    float matrix[ 6 ] = // Horizontal 2 times representation
       { 2.0,  0.0,  (float)lcd.width()  / 2
       , 0.0,  1.0,  (float)lcd.height() / 2 };
     lcd.pushImageAffine(matrix, image_width, image_height, rgb332);
@@ -233,7 +218,7 @@ setAddrWindow は描画範囲外が指定された場合は範囲内に調整さ
   lcd.clear(TFT_DARKGREY);
 
   {
-    float matrix[6] = // 縦２倍表示
+    float matrix [ 6 ] = // Double vertical display
       { 1.0,  0.0,  (float)lcd.width()  / 2
       , 0.0,  2.0,  (float)lcd.height() / 2 };
     lcd.pushImageAffine(matrix, image_width, image_height, rgb332);
@@ -244,7 +229,7 @@ setAddrWindow は描画範囲外が指定された場合は範囲内に調整さ
   lcd.clear(TFT_DARKGREY);
 
   {
-    float matrix[6] = // 斜め変形
+    float matrix [ 6 ] = // Diagonal deformation
       { 1.0, -0.4,  (float)lcd.width()  / 2
       , 0.0,  1.0,  (float)lcd.height() / 2 };
     lcd.pushImageAffine(matrix, image_width, image_height, rgb332);
@@ -254,7 +239,7 @@ setAddrWindow は描画範囲外が指定された場合は範囲内に調整さ
   delay(1000);
   lcd.clear(TFT_DARKGREY);
 
-  // pushImageAffineWithAA関数を使用するとアンチエイリアスが有効になります。
+  // Use the pushImageAffineWithAA function to enable antialiasing.
   {
     float matrix[6] =
       { 1.0,  0.0,  (float)lcd.width()  / 2

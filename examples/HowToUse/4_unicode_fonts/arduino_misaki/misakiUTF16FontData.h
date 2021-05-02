@@ -1,9 +1,9 @@
 //
-// 美咲フォント 教育フォント1710字（半角＋全角） by たま吉さん
-// 2016/03/16 全角小文字英数字の不具合対応
-// 2016/07/10 fdata[]を競合しないよう、static宣言追加
-// 2019/01/30 fdata[]ftable[]の非AVR系対応
-// 2019/07/16 １フォントを7バイトに圧縮
+// Misaki font Educational font 1710 characters (half-width + full-width) by Tamakichi
+// 2016/03/16 Support for double-byte lowercase alphanumeric characters
+// 2016/07/10 Added static declaration so as not to conflict with fdata []
+// 2019/01/30 fdata [] ftable [] non-AVR system support
+// 2019/07/16 Compress 1 font to 7 bytes
 
 #ifndef misakiUTF16FontData_h
 #define misakiUTF16FontData_h

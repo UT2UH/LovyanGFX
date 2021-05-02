@@ -1,11 +1,11 @@
 
-// このサンプルの実行にはArduino-misakiUTF16が必要です。
+// Arduino-misaki UTF16 is required to run this sample.
 // need misakifont to run this example.
 //
 // URL : https://github.com/Tamakichi/Arduino-misakiUTF16
 //
 
-// Arduino-misakiUTF16のフォントデータをincludeします。
+// Include Arduino-misaki UTF16 font data.
 // Include the font data of Arduino-misakiUTF16.
 #include "misakiUTF16FontData.h"
 
@@ -13,16 +13,16 @@
 
 static LGFX lcd;
 
-// lgfx::BDFfontクラスを使って、Arduino-misakiUTF16を使用できるように設定します。
+// Use the lgfx :: BDFfont class to configure Arduino-misakiUTF16 to be available.
 static constexpr lgfx::BDFfont misaki_font = 
-  { fdata             // 第１引数 フォントのビットマップデータ
-  , ftable            // 第２引数 unicodeフォントテーブル
-  , sizeof(ftable)>>1 // 第３引数 フォントテーブルのサイズ
-  , 8                 // 第４引数 フォント幅
-  , 4                 // 第５引数 フォント幅 (半角)
-  , 7                 // 第６引数 フォント高さ
-  , 6                 // 第７引数 ベースライン高さ
-  , 8                 // 第８引数 改行時の縦方向カーソル移動量
+  {fdata              // Bitmap data of the first argument font
+  , ftable             // 2nd argument unicode font table
+  , sizeof (ftable) >> 1  // 3rd argument font table size
+  , 8                  // 4th argument font width
+  , 4                  // 5th argument font width (half-width)
+  , 7                  // 6th argument font height
+  , 6                  // 7th argument Baseline height
+  , 8                  // 8th argument Vertical cursor movement amount at line feed
   };
 
 
@@ -30,7 +30,7 @@ void setup()
 {
   lcd.init();
 
-  // 先ほど作成した misaki_font を setFont 関数の引数に指定することで、print や drawString 等で使用できます。
+  // By specifying the misaki_font created earlier as an argument of the setFont function, it can be used in print, drawString, etc.
   lcd.setFont(&misaki_font);
 
   lcd.setTextWrap(true, true);
