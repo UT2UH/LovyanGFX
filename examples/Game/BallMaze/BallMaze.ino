@@ -19,6 +19,15 @@
  static constexpr float zoom_min = 1.4;
  static constexpr float zoom_max = 16;
 
+#elif defined ( LGFX_M35STACK )
+
+ #define BUTTON_A_PIN 39
+ #define BUTTON_B_PIN 26
+
+ static constexpr std::uint32_t draw_cycle = 3;
+ static constexpr float zoom_min = 2;
+ static constexpr float zoom_max = 32;
+ 
 #elif defined( LGFX_ODROID_GO ) || defined( ARDUINO_ODROID_ESP32 ) // ODROID-GO
 
  #define BUTTON_A_PIN 32

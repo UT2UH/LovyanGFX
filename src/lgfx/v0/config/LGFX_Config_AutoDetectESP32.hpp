@@ -1138,6 +1138,66 @@ namespace lgfx
       }
   #endif
 
+  // UT2UH M35
+  #if defined ( LGFX_AUTODETECT ) || defined ( LGFX_M35STACK )
+      if (nvs_board == 0 || nvs_board == lgfx::board_t::board_UT2UH_M35Stack) {
+        releaseBus();
+        _spi_mosi = 23;
+        _spi_miso = 19;
+        _spi_sclk = 18;
+        initBus();
+
+        lgfx::lgfxPinMode(33, lgfx::pin_mode_t::output); // M35Stack LoRa CS
+        lgfx::gpio_hi(33);
+
+        p_tmp.spi_3wire = false;
+        p_tmp.spi_cs   = 5;
+        p_tmp.spi_dc   = 32;
+        p_tmp.gpio_rst = -1;
+        setPanel(&p_tmp);
+
+        auto id = readPanelID();
+        ESP_LOGW("LovyanGFX", "[Autodetect] panel id:%08x", id);
+        if ((id & 0xFF) == 0x00) {   // check panel https://www.buydisplay.com/serial-spi-3-5-inch-tft-lcd-module-in-320x480-optl-touchscreen-ili9488
+          ESP_LOGW("LovyanGFX", "[Autodetect] UT2UH_M35Stack");
+          board = lgfx::board_t::board_UT2UH_M35Stack;
+          auto p = new lgfx::Panel_ILI9488();
+          p->freq_write = 40000000;
+          p->freq_read  = 16000000;
+          p->freq_fill  = 40000000;
+          p->spi_3wire = false;
+          p->spi_cs    = 5;
+          p->spi_dc    = 32;
+          p->gpio_bl   = -1;
+          setPanel(p);
+
+          lgfx::i2c::init(I2C_NUM_1, 21, 22, 400000);
+          std::uint8_t tmp[2];
+          if (lgfx::i2c::readRegister(I2C_NUM_1, 0x38, 0xA8, tmp, 1))
+          {
+            ESP_LOGW("LovyanGFX", "[Autodetect] touch id:%08x", tmp[1]);
+            auto t = new lgfx::Touch_FT5x06();
+            t->gpio_int = 4;    // INT pin number
+            t->i2c_sda  = 21;   // I2C SDA pin number
+            t->i2c_scl  = 22;   // I2C SCL pin number
+            t->i2c_addr = 0x38; // I2C device addr
+            t->i2c_port = I2C_NUM_1;// I2C port number
+            t->freq = 400000;   // I2C freq
+            t->x_min = 0;
+            t->x_max = 319;
+            t->y_min = 0;
+            t->y_max = 479;
+            touch(t);
+          }
+          goto init_clear;
+        }
+        lgfx::gpio_lo(p_tmp.spi_cs);
+        lgfx::gpio_lo(p_tmp.spi_dc);
+        lgfx::gpio_lo(33);
+        p_tmp.spi_3wire = true;
+      }
+  #endif
+
       releaseBus();
       {
         ESP_LOGW("LovyanGFX", "[Autodetect] detect fail.");

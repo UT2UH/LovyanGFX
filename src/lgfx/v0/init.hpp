@@ -94,6 +94,8 @@ Contributors:
   #define LGFX_LOLIN_D32_PRO
  #elif defined( ARDUINO_ESP32_WROVER_KIT )
   #define LGFX_ESP_WROVER_KIT
+ #elif defined( ARDUINO_ESP32_DEV )
+  #define LGFX_M35STACK
  #endif
 
  #if defined ( LGFX_AUTODETECT ) || defined ( LGFX_M5STACK_COREINK )
